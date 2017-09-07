@@ -1,0 +1,487 @@
+---
+title: "Project EDA"
+author: "Karan Thacker"
+date: "28 August 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Introdution 
+This is a project on doing Exploratory Data Analysis on a set of observations of white wine. 
+**Objective** to be acheived is to get an idea about which variables are closely related to the output variable `quality` of the 
+data set. To acheive this objective, the primary tool is the `ggplot` package to create plots including : 
+
+- scatter plots 
+- histograms 
+- box plots 
+- bar charts 
+- line graphs 
+
+The procedure implemented is as follows:
+
+1. Examining the data structure 
+2. exploring single variable
+3. exploring 2 variable relationship
+4. exploring multi variable relationship
+
+
+##  Examining the data structure 
+
+below is the structure of the data frame of white wine which is named `ww` and the type of each variable is shown. Also the stats of each
+variable is given by the summary function
+
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+ww = read.csv("wineQualityWhites.csv") # function to write csv data to data frame
+str(ww)     # to see the data type of each variable 
+summary(ww) # summarises all the varaibles with stats
+```
+
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+# installing the libraries for the functions used with library() function
+library(ggplot2)
+library(gridExtra) 
+library(dplyr)
+library(reshape2)
+library(GGally)
+```
+
+
+## exploring single variable
+
+summarising the output variable quality with stats of mean median max min etc
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+summary(ww$quality)
+table(ww$quality)
+```
+we can see that **9** is the top score of `rating` variable with median score of **6**
+
+```{r echo=FALSE, message =FALSE, warning =FALSE}
+# creating function for plotting histogram
+create_hist = function(xvariable, xname ){
+  return(qplot(x = xvariable, data = ww, xlab = xname ))
+  # qplot is used to plot graphs and as.factor used 
+  #to change the variable from int to factor 
+
+}
+
+```
+
+
+### plotting histogram for quality 
+
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+create_hist(as.factor(ww$quality),xname = 'quality')
+```
+
+### Categorising the output variable
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+# using if else statement to create a quality group out of ratings
+ww$quality_G = ifelse(ww$quality<= 5,'average',
+                      ifelse(ww$quality<=6,'good','classic'))
+ww$quality_G = ordered(ww$quality_G,levels = c('average','good','classic'))  
+create_hist(ww$quality_G, xname = 'quality group') +geom_bar()
+```
+```{r echo=FALSE, message =FALSE, warning =FALSE}
+table(ww$quality_G)
+```
+
+There is a new variable introduced which is `quality_G' which is categorised into 3 groups :
+
+1. rating (0-5) -> average
+2. rating (6) -> good
+3. rating (>6)  -> classic 
+
+### Creating histograms for all the input variables and drawing inference 
+
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+p1 =create_hist(ww$fixed.acidity,xname ='fixed.acidity') + 
+  scale_x_continuous(limits =c(4,10),breaks = seq(4,10,2))
+p2 = create_hist(ww$volatile.acidity,xname ='volatile.acidity') + 
+  scale_x_continuous(limits =c(0.0,0.8))
+p3 = create_hist(ww$citric.acid,xname ='citric.acid') + 
+  xlim(0,1)
+p4 = create_hist(ww$residual.sugar,xname ='residual.sugar') + 
+  xlim(0,20)
+p5 = create_hist(ww$chlorides,xname ='chlorides')+ xlim(0.0,0.2)
+p6 = create_hist(ww$free.sulfur.dioxide,xname ='free.sulfur.dioxide') + 
+  xlim(0,140)
+p7 = create_hist(ww$total.sulfur.dioxide,xname ='total.sulfur.dioxide')
+p8 = create_hist(ww$pH,xname ='pH')
+p9 = create_hist(ww$sulphates,xname ='sulphates')
+p10 = create_hist(ww$alcohol,xname ='alcohol')
+p11 = create_hist(ww$density,xname ='density')
+# grid,arrange is a function of gridExtra to assemble plots in one frame 
+grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,ncol =3)
+```
+
+As the plot suggests for the following variables :
+
+- fixed acidity : shows normal distribution with most of the values between 6-8 (mg / dm^3)
+- volatile acidity: shows squed dist with long tail(lots of outliers)
+- citric acid: shows normal curve 
+- residual sugar : lots of outliers and non - uniformity
+- chlorides : normal curve yet lots of outliers
+- free sulfur dioxide: squed graph 
+- sulphates : bi-modal distribution 
+- alcohol : spread unevenly over the whole range
+
+### Scaling uneven graphs to log 10
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+ p1 = create_hist(ww$volatile.acidity,xname = 'volatile.acidity (log10)') +
+  scale_x_log10() 
+# scale_x_log10 scales x axis to log value 
+ p2 = create_hist(ww$volatile.acidity,xname = 'volatile.acidity')
+ grid.arrange(p2,p1)
+```
+
+Above, Using the scale of log to the base 10 the distribution is normalised
+
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+p1 =create_hist(ww$citric.acid, xname = 'citric.acid log10') + 
+  scale_x_log10()
+p2 = create_hist(ww$citric.acid, xname = 'citric_acid') 
+grid.arrange(p2,p1)
+```
+
+the tail got shifted from back to front end but noromalising the count histograms of variables are not able to give any insight other than the knowing that 
+
+- the range is widely spread
+- there are plenty of outliers 
+
+applying log scale to the sugar residual
+
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+p1 = qplot(residual.sugar, data = ww) + scale_x_log10() + 
+  xlab('residual sugar log10')
+p2 = qplot(residual.sugar, data = ww) 
+grid.arrange(p2,p1)
+```
+
+the squed histogram turns out to be bimodal on log scale 
+
+## Exploring relationship between two variables 
+
+Below is a **scatter plot matrix** to look upto for future investigations 
+
+```{r  echo=FALSE, message =FALSE, warning =FALSE,  fig.width=15, fig.height=15}
+set.seed(123)
+ww_samp <- ww[c(2:13)]
+# ggpair function is the function of package GGally which creates the matrix 
+ggpairs(ww_samp,lower = list(continuous = wrap("points", shape = I('.'))),
+  upper = list(combo = wrap("box", outlier.shape = I('.'))) )
+
+```
+
+the lower half of the diagonals is made of scatter plots of variables in the index and the above is filled with correlation coefficient of
+person's correlation.
+
+```{r echo=FALSE, message =FALSE, warning =FALSE}
+# function for creating boxplots 
+create_box = function(yvariable,y){
+  return(qplot(as.factor(quality),yvariable, data = ww, geom = 'boxplot', ylab = y))
+}
+```
+
+
+### plotting boxplots for all variables with respect to Quality
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+p1 = create_box(ww$citric.acid, y = 'citric.acid')
+p2 = create_box(ww$volatile.acidity, y = 'volatile.acidity')
+p3 = create_box(ww$fixed.acidity, y = 'fixed.acidity')
+p4 = create_box(ww$residual.sugar, y = 'residual.sugar')
+p5 = create_box(ww$chlorides, y = 'chlorides')
+p6 = create_box(ww$free.sulfur.dioxide, y = 'free.sulfur.dioxide')
+p7 = create_box(ww$total.sulfur.dioxide, y = 'total.sulfur.dioxide')
+p8 = create_box(ww$pH, y = 'pH')
+p9 = create_box(ww$density, y = 'density')
+p10 = create_box(ww$alcohol, y = 'alcohol')
+p11 = create_box(ww$sulphates, y = 'sulphates')
+grid.arrange(p1,p2,p3,p4,p5,p6, ncol =3)
+```
+
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+grid.arrange(p7,p8,p9,p10)
+```
+
+### Drawing conclusion from the box plots
+
+- lots of outliers in the plots of citric acid, volatile acid and chlorides
+- for the quality rating of 9 we can see that there is a distingushed range of quantity
+  in all the variables. for example there is a fixed rate of sulfur dioxide for the qaulity 9
+  whines other than just one outlier.
+- also for density lowest value is recorded against quality rating 9 with one outlier 
+
+### scatter plots between 2 variables 
+
+#### fixed acidity vs density
+```{r echo=FALSE, message =FALSE, warning =FALSE}
+ggplot(aes(density,fixed.acidity), data = ww) +
+  geom_point(alpha = 0.05, position = 'jitter') +
+  geom_smooth()
+
+```
+
+Not able to draw any inference out of it . There seems to be a positive slope bu the residual length around it is too
+large to be compromised. So i find a dead end to find any link between these two variables
+
+#### total sulfur dioxide vs sulphates
+```{r echo=FALSE, message =FALSE, warning =FALSE}
+ggplot(aes(sulphates,total.sulfur.dioxide), data = ww) +
+  geom_point(alpha = 0.1, position = 'jitter') +
+  scale_x_log10()+   # scaling the x axis to log10
+  geom_smooth()
+```
+
+since the source of sulfur dioxide in wine is sulphate so i chose to plot them against each other. But the plot 
+failed to establish the dependancy of sulfur dioxide on sulphates
+
+#### Creating a new variable 
+`total_acidity` which adds up `total.acidity` and `volatile.acidity`
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+ww$total_acidity =  ww$fixed.acidity + ww$volatile.acidity
+summary(ww$total_acidity)
+```
+Above, summary stats of the variable 'total_acidity'
+
+### plotting total_acidity vs quality
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+create_box(ww$total_acidity, y ='total acidity')
+```
+
+adding volatile and fixed acidity together and than ploting it against quality.
+we can see that average acidity is declining as we should towards better quality.
+Only the wines with quality rating 9 are the exception.
+
+
+**There seems to be a dependency of quality on the variable density as per the boxplot 
+lets check out the pearson's coeffecient  between them**
+
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+with(ww, cor.test(density,quality))
+```
+  
+  not a strong coef but shows an acceptable rate of connection between the two
+so lets visit the boxplot again to see if there are any trends visible 
+
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+create_box(ww$density, y = 'density')
+```
+  
+  We can see a steady dip in the boxplot range after quality =5 till 9 but  nothing can be
+  clearly identified from the scatter plot but wont lose hope and give it another try by 
+  plotting mean density with the quality rating values in the form of line graph
+
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+# using dplyr package to chain operations with %>%
+ww.qaul_avg = ww %>%  
+  group_by(quality)%>%      
+summarise(density_avg = mean(density),
+          density_median = median(density),
+          n =n()) %>%
+  arrange(quality)
+
+ ggplot(aes(quality,density_avg),data = ww.qaul_avg) + geom_line() + 
+   scale_x_continuous(lim =c(3,10), breaks = seq(3,10,1)) 
+
+
+```
+ 
+  other than the starting two rating values 3 and 4 the graph shows good linear negative corelation
+  
+  ## summary of density averaged on the iterations of quality 
+```{r echo=FALSE, message =FALSE, warning =FALSE}
+summary(ww.qaul_avg)
+
+```
+  
+  
+### Calculating mean values of variables for classic quality wines 
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+mean <- c(mean(subset(ww, quality_G == 'classic')$citric.acid),
+          mean(subset(ww, quality_G == 'classic')$volatile.acidity),
+          mean(subset(ww, quality_G == 'classic')$fixed.acidity),
+          mean(subset(ww, quality_G == 'classic')$residual.sugar),
+          mean(subset(ww, quality_G == 'classic')$chlorides),
+          mean(subset(ww, quality_G == 'classic')$free.sulfur.dioxide),
+          mean(subset(ww, quality_G == 'classic')$total.sulfur.dioxide),
+          mean(subset(ww, quality_G == 'classic')$density),
+          mean(subset(ww, quality_G == 'classic')$pH),
+          mean(subset(ww, quality_G == 'classic')$sulphates),
+          mean(subset(ww, quality_G == 'classic')$alcohol))
+
+
+names(mean) <- c('citric.acid', 'volatile.acidity', 'fixed.acidity',
+                         'residual.sugar', 'chlorides', 'free.sulfur.dioxide',
+                         'total.sulfur.dioxide', 'density', 'pH',
+                         'sulphates', 'alcohol')
+
+mean
+```
+
+
+### Calculating median values of variables for classic quality wines 
+
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+median <- c(median(subset(ww, quality_G == 'classic')$citric.acid),
+          median(subset(ww, quality_G == 'classic')$volatile.acidity),
+          median(subset(ww, quality_G == 'classic')$fixed.acidity),
+          median(subset(ww, quality_G == 'classic')$residual.sugar),
+          median(subset(ww, quality_G == 'classic')$chlorides),
+          median(subset(ww, quality_G == 'classic')$free.sulfur.dioxide),
+          median(subset(ww, quality_G == 'classic')$total.sulfur.dioxide),
+          median(subset(ww, quality_G == 'classic')$density),
+          median(subset(ww, quality_G == 'classic')$pH),
+          median(subset(ww, quality_G == 'classic')$sulphates),
+          median(subset(ww, quality_G == 'classic')$alcohol))
+
+names(median) <- c('citric.acid', 'volatile.acidity', 'fixed.acidity',
+                         'residual.sugar', 'chlorides', 'free.sulfur.dioxide',
+                         'total.sulfur.dioxide', 'density', 'pH',
+                         'sulphates', 'alcohol')
+
+median
+```
+
+## Multi variable exploration 
+
+### fixed acidity vs pH on quality group
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+ggplot(aes(pH,fixed.acidity), data = ww) + geom_point(aes(color = ww$quality_G),
+                                 alpha =0.1, position = position_jitter(h=0)) + 
+  geom_smooth()
+# geom_point is for plotting scatterplot 
+# geom_smooth  is to smooth out a relation line 
+```
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+with(ww,cor.test(pH,fixed.acidity))
+# cor.test is function to find correlation coeff btw 2 variables 
+```
+With the graph curve , we can visualise a negetive corelation between the fixed acidity and pH.
+scientifically also it makes good sense as more the substance acidic , less is the pH value 
+And to back this the co relation factor is also pretty much good to establish a downward slop.
+
+
+### pH vs total_acidity (coloring with alcohol and faceting with quality_G)
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+ggplot(aes(total_acidity,pH), data = ww) + geom_point(aes(color = alcohol),
+                          position = position_jitter(h=0) )+ geom_smooth()+
+  facet_wrap(~quality_G) 
+#facet splits data into different graphs as per the faceted variable 
+```
+
+we can observe an inverse relation with the smooth line between the acidity and pH which can be understood 
+scientifically as more the acidity lesser the pH on a scale of 1 to 14
+
+### residual.sugar vs density (coloring with alcohol)
+```{r  echo=FALSE, message =FALSE, warning =FALSE}
+ ggplot(aes(density,residual.sugar),
+        data = subset(ww,quantile(residual.sugar)<0.99)) + 
+  geom_point(aes(color = alcohol),position = position_jitter(h=0)) +
+  scale_x_continuous(lim =c(0.98,1.04), breaks = seq(0.98,1.04,0.02) )
+ 
+```
+
+a linear relationship can be esatblished from this graph between residual sugar and density.
+
+
+### alcohol vs total.sulfur.dioxide (color = as.factor(quality))
+
+```{r echo=FALSE, message =FALSE, warning =FALSE}
+set.seed(123)   # setting seed to recreate same sample set every time
+ww_sample = ww[sample(1:length(ww$quality),1000),] #sampled with 1000 obs
+ggplot(aes(total.sulfur.dioxide,alcohol), data = ww_sample) + 
+  geom_point(aes(color = as.factor(quality)), position = position_jitter(h=0)) +
+  geom_smooth(color = 'black') +
+  scale_color_brewer(type = 'seq')
+```
+
+better quality wines are observed on the upper side of the graph, closer to the y axis.
+
+# Final plots and summary
+
+## Plot 1 : alcohol vs total.sulfur.dioxide
+
+```{r echo=FALSE, message =FALSE, warning =FALSE}
+set.seed(123)   # setting seed to recreate same sample set every time
+ww_sample = ww[sample(1:length(ww$quality),1000),] #sampled with 1000 obs
+ggplot(aes(total.sulfur.dioxide,alcohol), data = ww_sample) + 
+geom_point(aes(color = as.factor(quality))) + 
+scale_color_brewer(type = 'seq', 
+                   palette = 'Blues',
+                   guide = guide_legend
+                   (title = 'quality', 
+                   reverse = T,
+                   override.aes = list(alpha = 1, size = 2))) +   
+  # color palatte , naming the legend, fixing order, size , alpha 
+geom_smooth(color = 'black') +
+scale_x_continuous(lim = c(0,300), breaks = seq(0,300,20)) + # scaling axis 
+scale_y_continuous(lim = c(8,14), breaks = seq(8,14,0.5)) +
+ggtitle('Alcohol vs Total sulfur dioxide on wine quality') +  # naming plot 
+ylab('alcohol (% by volume)') +           # naming axis
+xlab('Total sulfur dioxide (mg / dm^3)')  
+  
+```
+
+## Inference of plot 1
+From this graph we can conclude that alcohol has negative correltion with sulfur dioxide and we can see that **wines of rating above 6**
+are mostly placed in a region of ** more alcohol % by volume and less of sulfur dioxide**
+
+## Plot 2
+```{r echo=FALSE, message =FALSE, warning =FALSE}
+     ggplot(aes(density,residual.sugar),
+            data = subset(ww,quantile(residual.sugar)<0.99)) + 
+  # taking lesser than 99 per centil^
+  geom_point(aes(color = alcohol), 
+             position = position_jitter(h=0), size =1 ) + # scatter plot
+  facet_wrap(~quality_G) + # faceting as per quality group
+  scale_y_continuous(lim = c(0,20), breaks = seq(0,20,5)) + # scaling y axis 
+  ggtitle('Residual sugar vs Density on Alcohol faceted by Quality Group') +
+  xlab('Density (g / cm^3)') +      # x axis label
+  ylab('Residual sugar (g / dm^3)') # y axis label 
+
+
+```
+
+##  Inference of plot 2
+what we can conclude from this plot is that there is a  strong linear relationship between the residual sugar and 
+density . The important point over here is that ** at the bottom of the graph closer to 0 axis alcohol per centage is higher** which points out the fact that **lesser the sugar and density more is the alcohol %** and **more the alcohol better is the wine qaulity**. So we can indirectly link sugar and density with quality of wine on an inverse relation.
+
+
+## Plot 3
+```{r echo=FALSE, message =FALSE, warning =FALSE}
+
+     ggplot(data = ww, aes(as.factor(quality),   
+                           total.sulfur.dioxide)) +
+               geom_boxplot() +     # lplotting boxplot
+               xlab("Quality") +    # lableing x axis
+               ylab("Total Sulfur Dioxide (g / dm^3)") + # labeling x axis
+              ggtitle("Total Sulfur Dioxide vs Quality Boxplot")  # title 
+
+```
+
+##  Inference of plot 3
+boxplot : we can see that as quality of wine increases the deviation of value of sulfur dioxide from the median 
+value decreases closing on to an optimal value for quality improvement.
+
+# Reflection 
+So after going through all of the EDA process i was able to connect most of the input variables to the outcome quality 
+variable. To draw a final conclusion a higher level of alcohol % v/v , less possible density and residual sugar and an 
+optimal value of total sulfur dioxide is the formula to create top quality wine.
+
+Mostly the path i used to follow was strongly driven by scatter plot matrix.
+
+The place where i got stuck was coming out with the third final plot to back a good hypothysis. The 3rd plot i came up with
+took me time to trace out. 
+
+Again the conclusion strongly relies on the quality ratings given by the critics which can differ as per taste or bias to 
+a particular brand.
+
+What future work can be done is to build a model to rate the wines from this data set and to find a configuration of elements to make top quality wine , the process should be focused on the chemistry of substances as well doing tests in the labs and 
+finding out a perfect wine by trial and error method in labs and bruery.
+
+###ThankYou
+
